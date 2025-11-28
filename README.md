@@ -1,6 +1,6 @@
 ## Auth using localStorage and bearer token in header
 
-//could nt have accessToken as a state as localStorage mei we are updating, not the actual acccestoken, use setUser to trigger atuhcontext only in login and logout
+- could'nt have `accessToken` as another state in `AuthContext`, as we are updating the localStorage, not the actual `acccestoken`. Use `setUser` (exposed from auth context) instead to trigger AuthContext's re-render through login and logout
 
 1. You come to home page at '/'
 2. If you are an authorized user, (checked using user obejct from AuthContext), you access your details and logout button, otherwise you access the login and register options
