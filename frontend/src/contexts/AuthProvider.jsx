@@ -1,46 +1,49 @@
-import axios from "axios";
 import { createContext, useContext, useEffect, useState } from "react";
-import { BACKEND_URL } from "../constants/url";
+import api from "../utils/axiosInterceptor";
 
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+
+  function logout() {
+    localStorage.removeItem("accessToken");
+    setUser(null);
+  }
+
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) {
+      console.error("No access token present in local storage");
       return;
     }
-
-    async function getUser() {
+    async function validateUser() {
       try {
-        const response = await axios.get(`${BACKEND_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        setUser(response?.data);
+        const response = await api.get("/auth/me");
+        setUser(response.data);
       } catch (e) {
-        // network error → e.response is undefined
-        if (!e.response) {
-          console.error("network error. Unable to validate user.");
+        const status = e.response?.status;
+        if (status !== 401) {
+          console.error(e.response?.data?.message);
           return;
         }
 
-        // token invalid / expired
-        if (e.response.status === 401 || e.response.status === 403) {
-          console.error("Token invalid or expired. Logging out...");
-          localStorage.removeItem("accessToken");
-          setUser(null);
+        //refreshing token failed, logout the user
+        if (status === 401) {
+          console.error(
+            "Session expired, please login again (refresh token expired)"
+          );
+          logout();
           return;
         }
+
+        console.error(e.response.data?.message || "Unexpected error");
       }
     }
-
-    getUser();
+    validateUser();
   }, []);
   return (
-    <AuthContext.Provider value={{ user, setUser }}>
+    <AuthContext.Provider value={{ user, setUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

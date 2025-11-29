@@ -1,5 +1,6 @@
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
 async function authMiddleware(req, res, next) {
   const authHeader = req.headers["authorization"];
@@ -11,11 +12,12 @@ async function authMiddleware(req, res, next) {
     });
   }
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-    req.userInfo = decoded;
+    const decoded = jwt.verify(token, process.env.ACCESS_SECRET_KEY);
+    const user = await User.findById(decoded.userId);
+    req.userInfo = user;
     next();
   } catch (e) {
-    return res.status(403).json({
+    return res.status(401).json({
       success: false,
       type: "invalid_token",
       message: "Invalid or expired token",

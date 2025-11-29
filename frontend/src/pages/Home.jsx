@@ -3,6 +3,7 @@ import { useAuth } from "../contexts/AuthProvider";
 
 function Home() {
   const { user, setUser } = useAuth();
+  console.log(user);
   function handleLogout() {
     localStorage.removeItem("accessToken");
     setUser(null);

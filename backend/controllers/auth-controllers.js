@@ -2,6 +2,10 @@ require("dotenv").config();
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+} = require("../utils/tokenGenerator");
 
 const registerUser = async (req, res) => {
   try {
@@ -80,18 +84,20 @@ const loginUser = async (req, res) => {
     });
   }
 
-  const accessToken = jwt.sign(
-    {
-      id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-    },
-    process.env.JWT_SECRET_KEY,
-    {
-      expiresIn: "10m",
-    }
-  );
+  const refreshToken = generateRefreshToken(user._id);
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: false,
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  console.log("set cookie", refreshToken);
+  console.log("hello?");
+
+  const accessToken = generateAccessToken(user._id);
+
   res.status(200).json({
     success: true,
     message: "Logged in successfully",
@@ -114,4 +120,28 @@ const getUserInfo = async (req, res) => {
   });
 };
 
-module.exports = { registerUser, loginUser, getUserInfo };
+const refreshToken = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    console.log(refreshToken);
+    const payload = jwt.verify(refreshToken, process.env.REFRESH_SECRET_KEY);
+    if (!payload) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired refresh token",
+      });
+    }
+    const accessToken = generateAccessToken(payload.userId);
+    res.status(200).json({
+      success: true,
+      accessToken,
+    });
+  } catch (e) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired refresh token",
+    });
+  }
+};
+
+module.exports = { registerUser, loginUser, getUserInfo, refreshToken };

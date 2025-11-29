@@ -1,12 +1,12 @@
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { BACKEND_URL } from "../constants/url";
 import { useAuth } from "../contexts/AuthProvider";
 import { Navigate } from "react-router-dom";
+import api from "../utils/axiosInterceptor";
 
 function ProtectedRoute({ children }) {
   const [valid, setValid] = useState(null);
-  const { setUser } = useAuth();
+  const { setUser, logout } = useAuth();
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) {
@@ -17,27 +17,27 @@ function ProtectedRoute({ children }) {
     }
     async function validateUser() {
       try {
-        const res = await axios.get(`${BACKEND_URL}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        setValid(res?.data?.success);
+        const response = await api.get("/auth/me");
+        setUser(response.data);
+        setValid(true);
       } catch (e) {
-        //in case of network error -> e.response is undefined
-        if (!e.response) {
-          console.error("Network error. Unable to validate user.");
+        const status = e.response?.status;
+        if (status !== 401) {
+          console.error(e.response?.data?.message);
           return;
         }
 
-        // token invalid / EXPIRED
-        if (e.response.status === 401 || e.response.status === 403) {
-          console.error("Token invalid or expired. Logging out...");
-          localStorage.removeItem("accessToken");
-          setUser(null);
+        //refreshing token failed, logout the user
+        if (status === 401) {
+          console.error(
+            "Session expired, please login again (refresh token expired)"
+          );
           setValid(false);
+          logout();
           return;
         }
+
+        console.error(e.response.data?.message || "Unexpected error");
       }
     }
     validateUser();

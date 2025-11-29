@@ -1,7 +1,7 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthProvider";
+import api from "../utils/axiosInterceptor";
 function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -18,7 +18,7 @@ function Login() {
     };
 
     try {
-      const response = await axios.post(
+      const response = await api.post(
         "http://localhost:3000/api/auth/login",
         userBody
       );
@@ -26,7 +26,9 @@ function Login() {
       setMessage(response?.data?.message);
       setSuccess(response?.data?.success);
       setUser(response?.data?.user);
-      navigate("/");
+      setTimeout(() => {
+        navigate("/");
+      }, 750);
     } catch (e) {
       console.log(e.message);
       setSuccess(false);
